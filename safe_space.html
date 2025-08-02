@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Space</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Use Inter font for a clean, modern look */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Define a custom scrollbar for the chat history */
+        #chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-history::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #chat-history::-webkit-scrollbar-thumb {
+            background-color: #93c5fd; /* A light blue scrollbar handle */
+            border-radius: 20px;
+            border: 2px solid transparent;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-200 to-blue-400 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl flex flex-col h-[80vh] md:h-[90vh]">
+        <!-- Header with Website Name and Logo -->
+        <header class="p-6 bg-blue-600 rounded-t-2xl flex items-center justify-center">
+            <!-- Psychology Logo (Trident Symbol) -->
+            <span class="text-white text-4xl mr-4">🔱</span>
+            <h1 class="text-white text-4xl font-bold">Safe Space</h1>
+        </header>
+
+        <!-- Chat History Display Area -->
+        <div id="chat-history" class="flex-grow p-6 overflow-y-auto space-y-4">
+            <!-- Initial Bot Message -->
+            <div class="flex justify-start">
+                <div class="bg-blue-500 text-white rounded-xl p-3 max-w-sm shadow-md">
+                    <p class="font-semibold">Safe Space Bot</p>
+                    <p>Hello! I'm here for you. You're in a safe place. Feel free to share whatever is on your mind. My purpose is to listen and validate your feelings without judgment.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Input Area -->
+        <div class="p-4 bg-gray-100 rounded-b-2xl flex items-center">
+            <textarea id="user-input" class="flex-grow bg-white text-gray-900 border-none rounded-xl p-3 resize-none focus:outline-none placeholder-gray-400" placeholder="Type your message here..." rows="1"></textarea>
+            <button id="send-btn" class="ml-4 bg-blue-500 text-white rounded-full p-4 transition duration-300 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-opacity-50 shadow-md">
+                <!-- Send Icon (SVG) -->
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const botName = "Safe Space Bot";
+
+        // Stores the conversation history for the API call
+        let chatHistoryArray = [{
+            role: "user",
+            parts: [{
+                text: "You are an empathetic and supportive chatbot named Safe Space Bot. Your primary goal is to listen to the user, validate their feelings without judgment, and provide a sense of comfort and safety. Always respond with empathy and understanding. When the user shares an emotion or a problem, acknowledge it directly and affirm that their feelings are valid. Do not offer advice or solutions unless explicitly asked. Focus on active listening and compassionate responses. Start by saying 'Hello! I'm here for you. You're in a safe place. Feel free to share whatever is on your mind. My purpose is to listen and validate your feelings without judgment.'"
+            }]
+        }];
+
+        /**
+         * Adds a message to the chat history UI.
+         * @param {string} sender The name of the sender ('You' or 'Bot').
+         * @param {string} message The message content.
+         * @param {boolean} isBot Determines message styling.
+         */
+        const addMessageToChat = (sender, message, isBot) => {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `flex ${isBot ? 'justify-start' : 'justify-end'}`;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `rounded-xl p-3 max-w-sm shadow-md ${isBot ? 'bg-blue-500 text-white' : 'bg-blue-100 text-gray-800'}`;
+
+            // Add sender's name for bot messages
+            if (isBot) {
+                const senderName = document.createElement('p');
+                senderName.className = 'font-semibold';
+                senderName.textContent = sender;
+                messageBubble.appendChild(senderName);
+            }
+
+            const messageText = document.createElement('p');
+            messageText.textContent = message;
+            messageBubble.appendChild(messageText);
+
+            messageContainer.appendChild(messageBubble);
+            chatHistory.appendChild(messageContainer);
+
+            // Automatically scroll to the latest message
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        };
+
+        /**
+         * Simulates a typing indicator for the bot.
+         * @returns {HTMLElement} The typing indicator element.
+         */
+        const showTypingIndicator = () => {
+            const indicatorContainer = document.createElement('div');
+            indicatorContainer.id = 'typing-indicator';
+            indicatorContainer.className = 'flex justify-start';
+            indicatorContainer.innerHTML = `
+                <div class="bg-blue-500 text-white rounded-xl p-3 max-w-sm shadow-md flex items-center space-x-1">
+                    <span class="font-semibold">${botName} is typing...</span>
+                    <span class="animate-pulse">.</span>
+                    <span class="animate-pulse" style="animation-delay: 0.2s;">.</span>
+                    <span class="animate-pulse" style="animation-delay: 0.4s;">.</span>
+                </div>
+            `;
+            chatHistory.appendChild(indicatorContainer);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            return indicatorContainer;
+        };
+
+        /**
+         * Sends a message to the chatbot and gets a response.
+         * Handles the API call and updates the UI.
+         */
+        const sendMessage = async () => {
+            const userMessage = userInput.value.trim();
+            if (userMessage === '') return;
+
+            // Clear input and show user message
+            addMessageToChat('You', userMessage, false);
+            userInput.value = '';
+            
+            // Add user message to chat history for the API
+            chatHistoryArray.push({
+                role: "user",
+                parts: [{
+                    text: userMessage
+                }]
+            });
+
+            // Show a loading indicator while waiting for the bot's response
+            const typingIndicator = showTypingIndicator();
+
+            try {
+                // Prepare the payload for the Gemini API call
+                const payload = {
+                    contents: chatHistoryArray
+                };
+                const apiKey = "AIzaSyCY3Hdkdb9X9SF0GzsQVsHbJVYl3Xwwcso";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                // Fetch the response from the API
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                // Check for a valid response structure
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    
+                    const botResponse = result.candidates[0].content.parts[0].text;
+                    
+                    // Add the bot's response to the chat history array for context in future requests
+                    chatHistoryArray.push({
+                        role: "model",
+                        parts: [{
+                            text: botResponse
+                        }]
+                    });
+
+                    // Remove typing indicator and show the bot's message
+                    typingIndicator.remove();
+                    addMessageToChat(botName, botResponse, true);
+
+                } else {
+                    // Handle cases where the response is unexpected
+                    typingIndicator.remove();
+                    addMessageToChat(botName, "I'm sorry, I couldn't generate a response. Please try again.", true);
+                    console.error("API response was malformed:", result);
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                typingIndicator.remove();
+                addMessageToChat(botName, "I'm having trouble connecting right now. Please try again in a moment.", true);
+            }
+        };
+
+        // Event listeners for sending messages
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Prevents a new line
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
